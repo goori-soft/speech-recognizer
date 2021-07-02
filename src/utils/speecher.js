@@ -14,22 +14,57 @@ class Speecher extends EventEmitter{
 
     constructor(){
         super();
-        this.currentTransciption = ''
-        this.history = []
+        this.currentTransciption = '';
+        this.history = [];
+        this.commands = [];
+
+        this.transcribeCommand = false;
 
         this.recognition = new SpeechRecognition();
-        this.activated = false
-        this.isStarted = false
+        this.activated = false;
+        this.isStarted = false;
+        this.startTime = Date.now();
+
+        this.events = Speecher.events;
 
         this.init();
     }
 
     appendHistory = ()=>{
         if(!this.isActivated()) return this;
-        this.history.push(this.currentTransciption);
-        this.emit(Speecher.events.RESULT, this.currentTransciption)
-        this.currentTransciption = '';
+
+        const end = Date.now()
+        const duration = end - this.startTime
+
+        const transcriptObj = {
+            text: this.currentTransciption,
+            start: this.startTime,
+            end,
+            duration,
+            type: 'transcription'
+        }
+
+        this.history.push(transcriptObj);
+        this.reset()
+        this.emit(Speecher.events.RESULT, transcriptObj)
         return this;
+    }
+
+    getCommandsCallbacks = (text)=>{
+        let callbacks = []
+        text = text.trim().toLowerCase()
+        this.commands.map(command => {
+            if (command.name.includes(text)){
+                this.emit('command', text)
+                callbacks.push({
+                    callback: command.callback,
+                    argument: text
+                });
+            }
+            return command
+        })
+
+        return callbacks
     }
 
     end = (e)=>{
@@ -41,14 +76,40 @@ class Speecher extends EventEmitter{
         return this.currentTransciption
     }
 
+    getPreview = ()=>{
+        const end = Date.now()
+        const duration = end - this.startTime
+        const transcriptObj = {
+            text: this.getCurrent(),
+            start: this.startTime,
+            end,
+            duration,
+            type: 'transcription'
+        }
+
+        return transcriptObj
+    }
+
     handleResult = (event)=>{
         if(!this.isActivated()) return this;
         const transcription = Array.from(event.results).map(result => result[0]).map(result=> result.transcript).join('');
+        const words = transcription.split(' ').length
+        if (words == 1) this.startTime = Date.now()
+
         this.setTransciption(transcription);
         
         const isFinal = event.results[0].isFinal
         if(isFinal){
-            this.appendHistory();
+            const callbacks = this.getCommandsCallbacks(transcription)
+            if (callbacks.length <= 0 || this.transcribeCommand){
+                this.appendHistory();
+            }
+            
+            this.reset();
+
+            for(let callbackObj of callbacks){
+                callbackObj.callback(callbackObj.argument)
+            }
         }
 
         return this
@@ -70,6 +131,24 @@ class Speecher extends EventEmitter{
         this.currentTransciption = transcription
         this.emit(Speecher.events.TRANSCRIPT, transcription);
         return this;
+    }
+
+    registerCommand = (commandText, callback)=>{
+        if (typeof(callback) == 'function'){
+            let commandName = commandText
+            if (!Array.isArray(commandText)) commandName = [commandText]
+
+            commandName = commandName.map(item=>item.toString().trim().toLowerCase())
+
+            const command = {name: commandName, callback}
+            this.commands.push(command)
+            this.emit('registerCommand', command)
+        }
+    }
+
+    reset = ()=>{
+        this.currentTransciption = '';
+        this.startTime = Date.now()
     }
 
     restart = ()=>{
@@ -106,4 +185,4 @@ Speecher.events = {
     STOP: 'stop',
 }
 
-module.exports = Speecher
+module.exports = new Speecher();
