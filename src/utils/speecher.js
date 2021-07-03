@@ -247,4 +247,5 @@ Speecher.events = {
     NOT_IGNORE: 'notIgnore'
 }
 
-module.exports = new Speecher();
+const speecher = new Speecher();
+export default speecher
