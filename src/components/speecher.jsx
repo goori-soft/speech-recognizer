@@ -1,15 +1,28 @@
 import React from "react";
 import speecher from "../utils/speecher";
+import commnads from "../utils/commands";
+import tips from "../utils/tips";
 
-import './speecher.css'
+import Button from '../components/button';
+import Analyser  from "./analyser";
+import {faMicrophoneAlt, faMicrophoneAltSlash} from '@fortawesome/free-solid-svg-icons'
 
-//const speecher = new Speecher()
+import './speecher.css';
 
+const primary = 'primary';
+const secondary = 'secondary';
 export default class SpeecherComponent extends React.Component{
   constructor(props){
     super(props)
     this.history = [];
     this.speecherDialogs = React.createRef()
+
+    this.state = {
+      buttonType: secondary,
+      buttonIcon: faMicrophoneAltSlash,
+      currentTip: 0
+    }
+
     this.define()
   }
 
@@ -40,6 +53,14 @@ export default class SpeecherComponent extends React.Component{
   }
 
   define = ()=>{
+    speecher.ignore();
+
+    speecher.setPrefix(commnads.prefix)
+
+    speecher.on(speecher.events.COMMAND, ()=>{
+      this.nextTip()
+    })
+
     speecher.on(speecher.events.TRANSCRIPT, (transcriptObj)=>{
       this.forceUpdate()
     })
@@ -48,20 +69,20 @@ export default class SpeecherComponent extends React.Component{
       this.append(transcriptObj)
     })
 
-    speecher.registerCommand([
-      'computador apagar mensagens',
-      'computador apagar mensagem'
-    ], ()=>{
+    speecher.on(speecher.events.IGNORE, ()=>{
+      this.setState({buttonType: secondary, buttonIcon: faMicrophoneAltSlash})
+    })
+
+    speecher.on(speecher.events.NOT_IGNORE, ()=>{
+      this.setState({buttonType: primary, buttonIcon: faMicrophoneAlt})
+    })
+
+    speecher.registerCommand(commnads.clearMessages, ()=>{
       this.history = [];
       this.forceUpdate()
     })
 
-    speecher.registerCommand([
-      'computador insira uma marcação',
-      'computador insira marcação',
-      'computador inserir marcação',
-      'computador inserir uma marcação',
-    ], (command)=>{
+    speecher.registerCommand(commnads.insertMark, (command)=>{
       this.append({
         text: '---',
         type: 'mark',
@@ -69,6 +90,19 @@ export default class SpeecherComponent extends React.Component{
         end: Date.now(),
         duration: 0
       })
+    });
+
+    speecher.registerCommand(commnads.startLog, ()=>{
+      speecher.notIgnore();
+    })
+
+    speecher.registerCommand(commnads.endLog,()=>{
+      speecher.ignore();
+    })
+
+    speecher.registerCommand(commnads.cleanLastMessage, ()=>{
+      this.history.splice(-1,1);
+      this.forceUpdate();
     })
   }
 
@@ -97,9 +131,26 @@ export default class SpeecherComponent extends React.Component{
   }
 
   getCurrent = ()=>{
+    if (speecher.isIgnoring()) return null
     const preview = speecher.getPreview()
     if (preview.text.trim() == '') return null;
     return(this.createDialogBox(preview, 'current'))
+  }
+
+  getColor = ()=>{
+    let color = '#54BF71'
+    if (speecher.isIgnoring()) color = '#F58F2A'
+    return color;
+  }
+
+  getTip = ()=>{
+    return tips[this.state.currentTip]
+  }
+
+  nextTip = ()=>{
+    let currentTip = this.state.currentTip + 1
+    if (currentTip >= tips.length) currentTip = 0
+    this.setState({currentTip})
   }
 
   render(){
@@ -110,6 +161,13 @@ export default class SpeecherComponent extends React.Component{
           {this.getCurrent()}
         </div>
         <div className="speecher-dialogs-shade"></div>
+        <div className="speecher-controller">
+          <Button type={this.state.buttonType} icon={this.state.buttonIcon} onClick={()=>{this.toggle()}}/>
+          <Analyser color={this.getColor}/>
+        </div>
+        <div className="speecher-tip">
+          {this.getTip()}
+        </div>
       </div>
     )
   }
@@ -119,5 +177,9 @@ export default class SpeecherComponent extends React.Component{
     if(el){
       el.scrollTo({top: el.scrollHeight, behavior: 'smooth'})
     }
+  }
+
+  toggle = ()=>{
+    speecher.toggleIgnore();
   }
 };

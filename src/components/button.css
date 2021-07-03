@@ -1,0 +1,31 @@
+.button{
+    background-color: var(--primary-color-dark);
+    color: #fff;
+    border-radius: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 70px;
+    height: 70px;
+    flex-grow: 0;
+}
+
+.button:hover{
+    background-color: var(--primary-color);
+    cursor: pointer;
+}
+
+.button.secondary{
+    background-color: var(--secondary-color-dark);
+}
+
+.button.secondary:hover{
+    background-color: var(--secondary-color);
+}
+
+.button-icon{
+    line-height: 30px;
+    font-size: 25px;
+    min-width: 30px;
+    text-align: center;
+}

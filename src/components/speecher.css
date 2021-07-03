@@ -1,8 +1,9 @@
 .speecher-container{
     position: relative;
     display: flex;
-    height: 50%;
+    height: 70%;
     width: 50%;
+    max-width: 500px;
     flex-grow: 0;
     flex-shrink: 0;
     flex-direction: column;
@@ -16,7 +17,7 @@
     flex-direction: column;
     flex-grow: 1;
     align-items:flex-end;
-
+    justify-content: flex-end;
     overflow-y: hidden;
 }
 
@@ -32,7 +33,7 @@
 .dialog-box{
     padding: 15px 20px;
     border-radius: 8px;
-    background-color: darkslategray;
+    background-color: var(--primary-color-dark);
     color: #fff;
     display: table;
     margin-bottom: 10px;
@@ -40,7 +41,7 @@
 }
 
 .dialog-box.mark{
-    background-color: tomato;
+    background-color: var(--secondary-color-dark);
     width: 100%;
 }
 
@@ -65,4 +66,18 @@
     text-align: right;
     margin: 0px 0px 10px;
     padding: 0px;
+}
+
+.speecher-controller{
+    display: flex;
+    align-items: center;
+}
+
+.speecher-tip{
+    padding: 10px 20px;
+    line-height: 120%;
+    text-align: center;
+    border-top: 1px solid var(--gray-light);
+    color: var(--gray);
+    margin-top: 20px;
 }

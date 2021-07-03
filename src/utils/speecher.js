@@ -17,8 +17,10 @@ class Speecher extends EventEmitter{
         this.currentTransciption = '';
         this.history = [];
         this.commands = [];
+        this.prefix = '';
 
         this.transcribeCommand = false;
+        this.ignoring = false;
 
         this.recognition = new SpeechRecognition();
         this.activated = false;
@@ -31,6 +33,7 @@ class Speecher extends EventEmitter{
     }
 
     appendHistory = ()=>{
+        if(this.isIgnoring()) return this;
         if(!this.isActivated()) return this;
 
         const end = Date.now()
@@ -53,9 +56,10 @@ class Speecher extends EventEmitter{
     getCommandsCallbacks = (text)=>{
         let callbacks = []
         text = text.trim().toLowerCase()
-        this.commands.map(command => {
+        this.commands
+        .map(command => {
             if (command.name.includes(text)){
-                this.emit('command', text)
+                this.emit(Speecher.events.COMMAND, text)
                 callbacks.push({
                     callback: command.callback,
                     argument: text
@@ -117,13 +121,29 @@ class Speecher extends EventEmitter{
 
     init = ()=>{
         this.recognition.interimResults = true
-        this.recognition.addEventListener('result', (event)=>{this.handleResult(event)});
-        this.recognition.addEventListener('end', this.end);
+        this.recognition.addEventListener(Speecher.events.RESULT, (event)=>{this.handleResult(event)});
+        this.recognition.addEventListener(Speecher.events.END, this.end);
+        return this;
+    }
+
+    ignore = ()=>{
+        this.ignoring = true;
+        this.emit(Speecher.events.IGNORE, this)
+        return this;
+    }
+
+    notIgnore = ()=>{
+        this.ignoring = false;
+        this.emit(Speecher.events.NOT_IGNORE, this)
         return this;
     }
 
     isActivated = ()=>{
         return this.activated
+    }
+
+    isIgnoring = ()=>{
+        return this.ignoring
     }
 
     setTransciption(transcription){
@@ -138,11 +158,15 @@ class Speecher extends EventEmitter{
             let commandName = commandText
             if (!Array.isArray(commandText)) commandName = [commandText]
 
-            commandName = commandName.map(item=>item.toString().trim().toLowerCase())
+            commandName = commandName.map(item=>{
+                item.toString().trim().toLowerCase()
+                item = [this.prefix, item].join(' ').trim()
+                return item
+            })
 
             const command = {name: commandName, callback}
             this.commands.push(command)
-            this.emit('registerCommand', command)
+            this.emit(Speecher.events.REGISTER_COMMNAD, command)
         }
     }
 
@@ -153,6 +177,11 @@ class Speecher extends EventEmitter{
 
     restart = ()=>{
         if(this.isActivated()) this.start()
+    }
+
+    setPrefix = (prefix)=>{
+        this.prefix = prefix.toString().toLowerCase().trim()
+        return this
     }
 
     start = ()=>{
@@ -172,17 +201,50 @@ class Speecher extends EventEmitter{
     stop = ()=>{
         if (!this.isActivated()) return this;
         this.activated = false;
+
+        if (this.isStarted){
+            this.recognition.stop()
+        }
+
+        this.isStarted = false;
         this.currentTransciption = '';
         this.emit(Speecher.events.STOP, this)
         return this
     }
+
+    toggle = ()=>{
+        if(this.isStarted){
+            this.stop()
+        }
+        else{
+            this.start()
+        }
+    }
+
+    toggleIgnore = ()=>{
+        if (this.ignoring){
+            this.notIgnore()
+        }
+        else{
+            this.ignore()
+        }
+
+        console.log('ignoring', this.ignoring)
+
+        return this;
+    }
 }
 
 Speecher.events = {
+    END: 'end',
+    COMMAND: 'command',
     TRANSCRIPT: 'transcript',
+    REGISTER_COMMNAD: 'registerCommand',
     RESULT: 'result',
     START: 'start',
     STOP: 'stop',
+    IGNORE: 'ignore',
+    NOT_IGNORE: 'notIgnore'
 }
 
 module.exports = new Speecher();

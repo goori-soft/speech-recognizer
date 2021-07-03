@@ -1,3 +1,17 @@
+:root{
+  --primary-color: #32a852;
+  --primary-color-light:#54bf71;
+  --primary-color-dark: #0c6e27;
+
+  --secondary-color: #db730b;
+  --secondary-color-light: #f58f2a;
+  --secondary-color-dark: #c46506;
+
+  --gray: #777;
+  --gray-light: #CCC;
+  --gray-dark: #333;
+}
+
 html{
   height: 100%;
   margin: 0px;
